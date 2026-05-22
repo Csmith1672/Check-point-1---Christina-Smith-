@@ -7,7 +7,8 @@
 #include <cstring>
 
 using namespace std;
-
+// Store PID of currently running child processes
+//Used so  Ctrl only kills the running command, not the shell 
 pid_t childPid = -1;
 
 // Handle Ctrl+C
@@ -21,6 +22,7 @@ void handle_sigint(int sig) {
 }
 
 // Split input into tokens
+
 vector<string> parseInput(const string &input) {
     stringstream ss(input);
     string token;
@@ -32,7 +34,7 @@ vector<string> parseInput(const string &input) {
     return args;
 }
 
-// Convert vector<string> to char**
+// Convert vector<string> to char format required by execuvp 
 char** buildArgs(vector<string> &args) {
     char** argv = new char*[args.size() + 1];
 
@@ -40,7 +42,7 @@ char** buildArgs(vector<string> &args) {
         argv[i] = new char[args[i].size() + 1];
         strcpy(argv[i], args[i].c_str());
     }
-
+// execvp requires Null at  end of arguement for argv 
     argv[args.size()] = nullptr;
     return argv;
 }
@@ -55,24 +57,25 @@ void freeArgs(char** argv, int size) {
 
 int main() {
     string input;
-
+// Register ctr +C handler 
     signal(SIGINT, handle_sigint);
-
+// main shell loop  
     while (true) {
         cout << "mysh> ";
         getline(cin, input);
-
+// ignores the empty input 
         if (input.empty()) continue;
-
+// parse input inot command + arguement 
         vector<string> args = parseInput(input);
         string cmd = args[0];
 
-        // EXIT
+        // Built- in command: exit 
         if (cmd == "exit") {
             break;
         }
 
-        // CD
+        //Built-in command: CD
+        //Changes the directory of the shell process 
         if (cmd == "cd") {
             if (args.size() < 2 || chdir(args[1].c_str()) != 0) {
                 perror("mysh: cd failed");
@@ -80,7 +83,8 @@ int main() {
             continue;
         }
 
-        // PWD
+        //built-in command: PWD
+        // prints the current directory that you are in 
         if (cmd == "pwd") {
             char cwd[1024];
             if (getcwd(cwd, sizeof(cwd)) != nullptr) {
@@ -107,6 +111,7 @@ int main() {
             childPid = -1;
         }
         else {
+            // fork failed 
             perror("fork failed");
         }
     }
